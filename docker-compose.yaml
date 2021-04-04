@@ -1,21 +1,24 @@
+---
 version: "2"
 services:
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.37.5
-    container_name: cadvisor
-    privileged: true
-    environment:
-      - PUID=1026
-      - PGID=100
-      - TZ=Europe/Stockholm
-      - device=/dev/kmsg
-      - detach=true
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:ro
-      - /sys:/sys:ro
-      #- /var/lib/docker/:/var/lib/docker:ro
-      #- /dev/disk/:/dev/disk:ro
-    ports:
-      - 8085:8080       
-    restart: unless-stopped
+    # cAdvisor collect data from docker host machine
+    cadvisor: 
+        image: gcr.io/cadvisor/cadvisor:v0.37.5
+        container_name: cadvisor
+        privileged: true
+        environment:
+            - PUID=1026     # <-- Change to desired user at the docker host
+            - PGID=100      # <-- Change to desired group at the docker host
+            - TZ=Europe/Stockholm
+            - device=/dev/kmsg
+            - detach=true
+        volumes:
+            - /:/rootfs:ro
+            - /var/run:/var/run:ro
+            - /sys:/sys:ro
+            #- /var/lib/docker:/var/lib/docker:ro # This is for most linux systems
+            - /volume1/@docker:/var/lib/docker:ro # This is for dockers on synology
+            #- /dev/disk/:/dev/disk:ro # Many linux systems, not available on synology
+        ports:
+            - 8085:8080 # <-- Change port mapping to fit the host running docker containers
+        restart: unless-stopped
