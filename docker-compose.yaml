@@ -1,5 +1,5 @@
 ---
-version: "2"
+version: "3"
 services:
     # cAdvisor collect data from docker host machine
     cadvisor: 
@@ -11,7 +11,6 @@ services:
             - PGID=100      # <-- Change to desired group at the docker host
             - TZ=Europe/Stockholm
             - device=/dev/kmsg
-            - detach=true
         volumes:
             - /:/rootfs:ro
             - /var/run:/var/run:ro
@@ -22,3 +21,53 @@ services:
         ports:
             - 8085:8080 # <-- Change port mapping to fit the host running docker containers
         restart: unless-stopped
+        
+        
+
+    # Prometheus stores the data that is collected by cAdvisor
+    prometheus:
+        image: prom/prometheus
+        container_name: prometheus
+        command: --config.file=/etc/prometheus/prometheus.yaml   --storage.tsdb.path=/prometheus
+        environment:
+            - PUID=99     # <-- This is UID for the user nobody
+            - PGID=99      # <-- This is GID for the group nobody
+            - TZ=Europe/Stockholm
+        volumes:
+            #- /volume1/docker/grafana/config:/etc/grafana
+            #- /volume1/docker/grafana/data:/var/lib/grafana
+            - prometheus-config:/etc/prometheus
+            - prometheus-data:/prometheus
+        ports:
+            - 9090:9090
+        restart: unless-stopped
+        
+        
+
+    # Grafana will plot some nice graphs based on the stored data
+    grafana:
+        image: grafana/grafana
+        container_name: grafana
+        environment:
+            - PUID=1026     # <-- Change to desired user at the docker host
+            - PGID=100      # <-- Change to desired group at the docker host
+            - TZ=Europe/Stockholm
+            - GF_SECURITY_ADMIN_PASSWORD=adminpswd  # Change after first login
+        volumes:
+            #- /volume1/docker/grafana/config:/etc/grafana
+            #- /volume1/docker/grafana/data:/var/lib/grafana
+            - grafana-config:/etc/grafana
+            - grafana-data:/var/lib/grafana
+        ports:
+            - 3000:3000
+        restart: unless-stopped
+
+volumes:
+    prometheus-config:      # The volume existed before docker-compose was run...
+        external: true    
+    prometheus-data:        # The volume existed before docker-compose was run...
+        external: true
+    grafana-config:         # The volume existed before docker-compose was run...
+        external: true    
+    grafana-data:           # The volume existed before docker-compose was run...
+        external: true
