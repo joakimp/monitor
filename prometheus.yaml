@@ -30,3 +30,44 @@ scrape_configs:    # The job name is added as a label `job=<job_name>` to any ti
       static_configs:
           - targets:
               - "192.168.1.17:8085"
+              
+    - job_name: "node-exporter"
+      static_configs:
+          - targets:
+              - "node-exporter:9100"
+              
+    - job_name: 'snmp'
+      static_configs:
+          - targets:
+              - 192.168.1.17  # SNMP device 1.
+              # - switch.local # SNMP device 2.
+      metrics_path: /snmp
+      params:
+          # module: [if_mib]
+          module: [synology]
+      relabel_configs:
+          - source_labels: [__address__]
+            target_label: __param_target
+          - source_labels: [__param_target]
+            target_label: instance
+          - target_label: __address__
+            replacement: 127.0.0.1:9116  # The SNMP exporter's real hostname:port.
+
+      - job_name: 'nas'
+        static_configs:
+            - targets:
+                - 192.168.1.17  # SNMP device 1.
+                # - switch.local # SNMP device 2.
+        metrics_path: /nas
+        params:
+            # module: [if_mib]
+            module: [synology]
+        relabel_configs:
+            - source_labels: [__address__]
+              target_label: __param_target
+            - source_labels: [__param_target]
+              target_label: instance
+            - target_label: __address__
+              replacement: 127.0.0.1:9116  # The SNMP exporter's real hostname:port.
+      
+        

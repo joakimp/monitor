@@ -24,6 +24,29 @@ services:
         
         
 
+    # node-exporter for data relating to the host.
+    node-exporter:
+        image: prom/node-exporter:latest
+        container_name: monitoring_node_exporter
+        restart: unless-stopped
+        expose:
+          - 9100
+          
+
+    # SNMP for data exported by the host
+    snmp:
+        image: quay.io/prometheus/snmp-exporter
+        #image: ricardbejarano/snmp_exporter
+        volumes:
+          - /volume1/docker/snmp_exporter:/etc/snmp_exporter
+        ports:
+          - 9116:9116
+          - 116:116/udp
+        restart: always
+        command: --config.file=/etc/snmp_exporter/snmp.yml
+    
+    
+
     # Prometheus stores the data that is collected by cAdvisor
     prometheus:
         image: prom/prometheus
@@ -53,6 +76,10 @@ services:
             - PGID=100      # <-- Change to desired group at the docker host
             - TZ=Europe/Stockholm
             - GF_SECURITY_ADMIN_PASSWORD=adminpswd  # Change after first login
+            - GF_SECURITY_ALLOW_EMBEDDING=true  # Make dashboard show up in iframe
+            - GF_AUTH_ANONYMOUS_ENABLED=true  # Enable anonymous access...
+            - GF_AUTH_ANONYMOUS_ORG_NAME=Anomusers  #...for graphs belonging to this organisation
+            - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer  #...with all users in the viewer role
         volumes:
             #- /volume1/docker/grafana/config:/etc/grafana
             #- /volume1/docker/grafana/data:/var/lib/grafana
