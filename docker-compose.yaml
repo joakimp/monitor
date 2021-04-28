@@ -25,12 +25,12 @@ services:
         
 
     # node-exporter for data relating to the host.
-    node-exporter:
-        image: prom/node-exporter:latest
-        container_name: monitoring_node_exporter
-        restart: unless-stopped
-        expose:
-          - 9100
+    # node-exporter:
+    #     image: prom/node-exporter:latest
+    #     container_name: monitoring_node_exporter
+    #     restart: unless-stopped
+    #     expose:
+    #       - 9100
           
 
     # SNMP for data exported by the host
@@ -57,8 +57,6 @@ services:
             - PGID=99      # <-- This is GID for the group nobody
             - TZ=Europe/Stockholm
         volumes:
-            #- /volume1/docker/grafana/config:/etc/grafana
-            #- /volume1/docker/grafana/data:/var/lib/grafana
             - prometheus-config:/etc/prometheus
             - prometheus-data:/prometheus
         ports:
@@ -75,11 +73,13 @@ services:
             - PUID=1026     # <-- Change to desired user at the docker host
             - PGID=100      # <-- Change to desired group at the docker host
             - TZ=Europe/Stockholm
-            - GF_SECURITY_ADMIN_PASSWORD=adminpswd  # Change after first login
+            - GF_SECURITY_ADMIN_USER=${GRAFANA_USERNAME}  # Usually this will be 'admin'
+            - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}  # Change after first login
             - GF_SECURITY_ALLOW_EMBEDDING=true  # Make dashboard show up in iframe
             - GF_AUTH_ANONYMOUS_ENABLED=true  # Enable anonymous access...
-            - GF_AUTH_ANONYMOUS_ORG_NAME=Anomusers  #...for graphs belonging to this organisation
+            - GF_AUTH_ANONYMOUS_ORG_NAME=${GRAFANA_ORGNAME}  # for graphs belonging to this organisation Anomusers
             - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer  #...with all users in the viewer role
+            - GF_INSTALL_PLUGINS=grafana-clock-panel,natel-discrete-panel,grafana-piechart-panel
         volumes:
             #- /volume1/docker/grafana/config:/etc/grafana
             #- /volume1/docker/grafana/data:/var/lib/grafana
