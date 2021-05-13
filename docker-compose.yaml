@@ -22,7 +22,42 @@ services:
             - 8085:8080 # <-- Change port mapping to fit the host running docker containers
         restart: unless-stopped
         
-        
+    #unifi-poller collects data from unifi equipment
+    unifi-poller:
+        image: golift/unifi-poller:${POLLER_TAG}
+        container_name: unifi-poller
+        restart: unless-stopped
+        ports:
+            - '9130:9130'
+        volumes: 
+            - up-config:/etc/env_up
+        env_file:
+            - '/etc/env_up/unifi-poller.env'
+        environment:
+            #- UP_INFLUXDB_DB=${INFLUXDB_DB}
+            #- UP_INFLUXDB_USER=${INFLUXDB_ADMIN_USER}
+            #- UP_INFLUXDB_PASS=${INFLUXDB_ADMIN_PASSWORD}
+            #- UP_INFLUXDB_URL=http://influxdb:8086
+            - UP_UNIFI_DEFAULT_USER=${UNIFI_USER}
+            - UP_UNIFI_DEFAULT_PASS=${UNIFI_PASS}
+            - UP_UNIFI_DEFAULT_URL=${UNIFI_URL}
+            - UP_POLLER_DEBUG=${POLLER_DEBUG}
+            - UP_UNIFI_DEFAULT_SAVE_DPI=${POLLER_SAVE_DPI}
+            - UP_INFLUXDB_DISABLE="true"
+            - UP_POLLER_DEBUG="false"
+            - UP_UNIFI_DYNAMIC="false"
+            - UP_PROMETHEUS_HTTP_LISTEN=0.0.0.0:9130
+            - UP_PROMETHEUS_NAMESPACE=${UNIFI_PROMETHEUS_NS}
+            - UP_UNIFI_CONTROLLER_0_SAVE_ALARMS="true"
+            - UP_UNIFI_CONTROLLER_0_SAVE_ANOMALIES="true"
+            - UP_UNIFI_CONTROLLER_0_SAVE_DPI="true"
+            - UP_UNIFI_CONTROLLER_0_SAVE_EVENTS="true"
+            - UP_UNIFI_CONTROLLER_0_SAVE_IDS="true"
+            - UP_UNIFI_CONTROLLER_0_SAVE_SITES="true"
+            - UP_UNIFI_CONTROLLER_0_URL=${UNIFI_URL}
+            - UP_UNIFI_CONTROLLER_0_USER=${UNIFI_USER}
+            - UP_UNIFI_CONTROLLER_0_PASS=${UNIFI_PASS}
+             
 
     # node-exporter for data relating to the host.
     # node-exporter:
@@ -69,6 +104,10 @@ services:
     grafana:
         image: grafana/grafana
         container_name: grafana
+        depends_on:
+            - prometheus
+        env_file:
+            - '/etc/grafana/grafana.env'
         environment:
             - PUID=1026     # <-- Change to desired user at the docker host
             - PGID=100      # <-- Change to desired group at the docker host
@@ -90,6 +129,8 @@ services:
         restart: unless-stopped
 
 volumes:
+    up-config:       # For storing the environment file...
+        external: true
     prometheus-config:      # The volume existed before docker-compose was run...
         external: true    
     prometheus-data:        # The volume existed before docker-compose was run...
