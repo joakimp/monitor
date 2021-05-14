@@ -1,5 +1,32 @@
 ---
+# Portiner on synlogy start these docker-compose files from /volume1/docker/portainer/compose/NN, 
+# where NN is a unique number for each stack (assigned automatically). For this file, NN=34.
+# Consequently, portainer looks in /volume1/docker/portainer/compose/34/ for the environment files.
+# Any updates to the environment should be stored there, or as environment variables in this file.
+# Unfortunately, environment variables in thes .env files are not available from this dockeer-compose.yaml
+# file.
+
 version: "3"
+# top level entries:  
+#configs:
+    #grafana.env:
+        #external: true
+    #unifi-poller.env:
+    #    external: true
+
+
+volumes:
+    #up-config:       # For storing the environment file...
+    #    external: true
+    prometheus-config:      # The volume existed before docker-compose was run...
+        external: true    
+    prometheus-data:        # The volume existed before docker-compose was run...
+        external: true
+    grafana-config:         # The volume existed before docker-compose was run...
+        external: true    
+    grafana-data:           # The volume existed before docker-compose was run...
+        external: true
+
 services:
     # cAdvisor collect data from docker host machine
     cadvisor: 
@@ -24,39 +51,45 @@ services:
         
     #unifi-poller collects data from unifi equipment
     unifi-poller:
-        image: golift/unifi-poller:${POLLER_TAG}
+        #image: golift/unifi-poller:${POLLER_TAG}
+        image: golift/unifi-poller:latest
         container_name: unifi-poller
+        #command: --config.file=/etc/up-config/unifi-poller.env
         restart: unless-stopped
         ports:
             - '9130:9130'
-        volumes: 
-            - up-config:/etc/env_up
+        #volumes: 
+        #    - up-config:/etc/env_up:ro
+        #configs:
+        #    - source: unifi-poller.env
+        #      target: /etc/env_up
         env_file:
-            - '/etc/env_up/unifi-poller.env'
-        environment:
-            #- UP_INFLUXDB_DB=${INFLUXDB_DB}
-            #- UP_INFLUXDB_USER=${INFLUXDB_ADMIN_USER}
-            #- UP_INFLUXDB_PASS=${INFLUXDB_ADMIN_PASSWORD}
-            #- UP_INFLUXDB_URL=http://influxdb:8086
-            - UP_UNIFI_DEFAULT_USER=${UNIFI_USER}
-            - UP_UNIFI_DEFAULT_PASS=${UNIFI_PASS}
-            - UP_UNIFI_DEFAULT_URL=${UNIFI_URL}
-            - UP_POLLER_DEBUG=${POLLER_DEBUG}
-            - UP_UNIFI_DEFAULT_SAVE_DPI=${POLLER_SAVE_DPI}
-            - UP_INFLUXDB_DISABLE="true"
-            - UP_POLLER_DEBUG="false"
-            - UP_UNIFI_DYNAMIC="false"
-            - UP_PROMETHEUS_HTTP_LISTEN=0.0.0.0:9130
-            - UP_PROMETHEUS_NAMESPACE=${UNIFI_PROMETHEUS_NS}
-            - UP_UNIFI_CONTROLLER_0_SAVE_ALARMS="true"
-            - UP_UNIFI_CONTROLLER_0_SAVE_ANOMALIES="true"
-            - UP_UNIFI_CONTROLLER_0_SAVE_DPI="true"
-            - UP_UNIFI_CONTROLLER_0_SAVE_EVENTS="true"
-            - UP_UNIFI_CONTROLLER_0_SAVE_IDS="true"
-            - UP_UNIFI_CONTROLLER_0_SAVE_SITES="true"
-            - UP_UNIFI_CONTROLLER_0_URL=${UNIFI_URL}
-            - UP_UNIFI_CONTROLLER_0_USER=${UNIFI_USER}
-            - UP_UNIFI_CONTROLLER_0_PASS=${UNIFI_PASS}
+            #- '/etc/env_up/unifi-poller.env' # This is where unifi-poller sees the file
+            - 'unifi-poller.env' # This is where portainer sees the file
+        #environment:
+            # #- UP_INFLUXDB_DB=${INFLUXDB_DB}
+            # #- UP_INFLUXDB_USER=${INFLUXDB_ADMIN_USER}
+            # #- UP_INFLUXDB_PASS=${INFLUXDB_ADMIN_PASSWORD}
+            # #- UP_INFLUXDB_URL=http://influxdb:8086
+            # - UP_UNIFI_DEFAULT_USER=${UNIFI_USER}
+            # - UP_UNIFI_DEFAULT_PASS=${UNIFI_PASS}
+            # - UP_UNIFI_DEFAULT_URL=${UNIFI_URL}
+            # - UP_POLLER_DEBUG=${POLLER_DEBUG}
+            # - UP_UNIFI_DEFAULT_SAVE_DPI=${POLLER_SAVE_DPI}
+            # - UP_INFLUXDB_DISABLE=true
+            # - UP_POLLER_DEBUG=false
+            # - UP_UNIFI_DYNAMIC=false
+            # - UP_PROMETHEUS_HTTP_LISTEN=0.0.0.0:9130
+            # - UP_PROMETHEUS_NAMESPACE=${UNIFI_PROMETHEUS_NS}
+            # - UP_UNIFI_CONTROLLER_0_SAVE_ALARMS=true
+            # - UP_UNIFI_CONTROLLER_0_SAVE_ANOMALIES=true
+            # - UP_UNIFI_CONTROLLER_0_SAVE_DPI=true
+            # - UP_UNIFI_CONTROLLER_0_SAVE_EVENTS=true
+            # - UP_UNIFI_CONTROLLER_0_SAVE_IDS=true
+            # - UP_UNIFI_CONTROLLER_0_SAVE_SITES=true
+            # - UP_UNIFI_CONTROLLER_0_URL=${UNIFI_URL}
+            # - UP_UNIFI_CONTROLLER_0_USER=${UNIFI_USER}
+            # - UP_UNIFI_CONTROLLER_0_PASS=${UNIFI_PASS}
              
 
     # node-exporter for data relating to the host.
@@ -86,6 +119,7 @@ services:
     prometheus:
         image: prom/prometheus
         container_name: prometheus
+        # The 'command:' argument is forwarded to the container for interpretation and execution
         command: --config.file=/etc/prometheus/prometheus.yaml   --storage.tsdb.path=/prometheus
         environment:
             - PUID=99     # <-- This is UID for the user nobody
@@ -106,19 +140,23 @@ services:
         container_name: grafana
         depends_on:
             - prometheus
+        #configs:
+        #    - source: grafana.env
+        #      target: /etc/grafana
         env_file:
-            - '/etc/grafana/grafana.env'
+            #- '/etc/grafana/grafana.env'
+            - 'grafana.env'
         environment:
             - PUID=1026     # <-- Change to desired user at the docker host
             - PGID=100      # <-- Change to desired group at the docker host
             - TZ=Europe/Stockholm
-            - GF_SECURITY_ADMIN_USER=${GRAFANA_USERNAME}  # Usually this will be 'admin'
-            - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}  # Change after first login
-            - GF_SECURITY_ALLOW_EMBEDDING=true  # Make dashboard show up in iframe
-            - GF_AUTH_ANONYMOUS_ENABLED=true  # Enable anonymous access...
-            - GF_AUTH_ANONYMOUS_ORG_NAME=${GRAFANA_ORGNAME}  # for graphs belonging to this organisation Anomusers
-            - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer  #...with all users in the viewer role
-            - GF_INSTALL_PLUGINS=grafana-clock-panel,natel-discrete-panel,grafana-piechart-panel
+            # - GF_SECURITY_ADMIN_USER=${GRAFANA_USERNAME}  # Usually this will be 'admin'
+            # - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}  # Change after first login
+            # - GF_SECURITY_ALLOW_EMBEDDING=true  # Make dashboard show up in iframe
+            # - GF_AUTH_ANONYMOUS_ENABLED=true  # Enable anonymous access...
+            # - GF_AUTH_ANONYMOUS_ORG_NAME=${GRAFANA_ORGNAME}  # for graphs belonging to this organisation Anomusers
+            # - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer  #...with all users in the viewer role
+            # - GF_INSTALL_PLUGINS=grafana-clock-panel,natel-discrete-panel,grafana-piechart-panel
         volumes:
             #- /volume1/docker/grafana/config:/etc/grafana
             #- /volume1/docker/grafana/data:/var/lib/grafana
@@ -128,14 +166,3 @@ services:
             - 3000:3000
         restart: unless-stopped
 
-volumes:
-    up-config:       # For storing the environment file...
-        external: true
-    prometheus-config:      # The volume existed before docker-compose was run...
-        external: true    
-    prometheus-data:        # The volume existed before docker-compose was run...
-        external: true
-    grafana-config:         # The volume existed before docker-compose was run...
-        external: true    
-    grafana-data:           # The volume existed before docker-compose was run...
-        external: true
